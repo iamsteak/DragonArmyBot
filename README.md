@@ -42,25 +42,29 @@ pnpm register
 pnpm dev
 ```
 
-## Wispbyte deployment
+## Pella deployment
 
-Wispbyte does not need a committed `.env` file. Upload or synchronize the repository files, then use the Wispbyte panel’s startup/environment settings.
+Pella advertises Node.js Discord bot hosting and GitHub integration [1] [2]. Import this repository or upload the ZIP, then configure the server with the following values:
 
-| Wispbyte setting | Value |
+| Pella setting | Value |
 | --- | --- |
 | Runtime | Node.js 20 or newer |
-| Install command | `npm install` or the panel’s automatic package installation |
+| Install command | `npm install` or Pella’s automatic package installation |
 | Startup command | `npm start` |
 | Required environment variable | `DISCORD_TOKEN` or `BOT_TOKEN` |
 | Optional environment variable | `DISCORD_CLIENT_ID` or `CLIENT_ID` |
 | Optional environment variable | `DISCORD_GUILD_ID` |
 | Optional environment variable | `DATA_FILE=./data/config.json` |
 
-The package’s `start` script runs `tsx src/index.ts`, so Wispbyte can start the project directly after installing the dependencies. If you prefer a compiled deployment, run `npm run build` and change the startup command to `node dist/index.js`.
+The package’s `start` script runs `tsx src/index.ts`, so Pella can start the project directly after installing dependencies. The bot does not need an HTTP port. Add the token through Pella’s environment settings, not to the repository. The token previously pasted into chat should be revoked and replaced before use. Keep the `data` directory persistent if you want server configuration to survive restarts.
 
-Add the token in Wispbyte’s environment-variable panel, not in GitHub. The token previously pasted into chat should be revoked and replaced before use. Keep the `data` directory persistent if you want server configuration to survive restarts or file synchronization.
+Run `npm run register` once from Pella’s console or from a local machine with the same environment variables. If `DISCORD_GUILD_ID` is present, commands are registered in that server immediately. If it is absent, commands are registered globally and may take time to appear.
 
-After the bot starts, run `npm run register` once from the Wispbyte console or a local machine with the same environment variables. If `DISCORD_GUILD_ID` is present, commands are registered in that server immediately. If it is absent, commands are registered globally and may take time to appear.
+Pella’s public pages confirm GitHub **import/integration**, but they do not document two-way synchronization or automatic commits from dashboard edits back to GitHub [1] [2]. Treat GitHub as the source repository and Pella as the deployment target unless your logged-in Pella dashboard explicitly provides a commit or push action. Changes made in Pella should not be assumed to update GitHub.
+
+## Other Node.js hosts
+
+The same project also works on Wispbyte and ordinary Node.js hosting. Use Node.js 20 or newer, install dependencies, set `DISCORD_TOKEN`, and start it with `npm start`.
 
 ## Recommended Discord permissions
 
@@ -90,6 +94,6 @@ The command definitions live in `src/commands/index.ts`, event handling lives in
 
 ## References
 
-[1]: https://wispbyte.com/blog/discord-bot-hosting "Complete Guide to Hosting Discord Bots on Wispbyte"
+[1]: https://www.pella.app/discord-bot-hosting "Pella Discord Bot Hosting"
 
-[2]: https://wispbyte.com/kb/getting-started "Wispbyte Knowledge Base: Getting Started"
+[2]: https://www.pella.app/free-discord-bot-hosting "Pella Free Discord Bot Hosting"
