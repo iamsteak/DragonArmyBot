@@ -24,7 +24,7 @@ describe('GuildStore', () => {
     const filePath = path.join(directory, 'config.json');
     const store = new GuildStore(filePath);
     await store.load();
-    expect(store.get('guild-1').prefix).toBe('!');
+    expect(store.get('guild-1').autoModEnabled).toBe(false);
     await store.update('guild-1', { autoModEnabled: true, blockedWords: ['spam'] });
     const raw = JSON.parse(await readFile(filePath, 'utf8')) as { guilds: Record<string, { autoModEnabled: boolean }> };
     expect(raw.guilds['guild-1']?.autoModEnabled).toBe(true);

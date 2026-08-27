@@ -2,7 +2,6 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 export type GuildConfig = {
-  prefix: string;
   logChannelId?: string;
   welcomeChannelId?: string;
   welcomeMessage?: string;
@@ -15,7 +14,6 @@ export type GuildConfig = {
 type StoreData = { guilds: Record<string, GuildConfig> };
 
 const defaults = (): GuildConfig => ({
-  prefix: '!',
   autoModEnabled: false,
   blockedWords: [],
   customCommands: {},

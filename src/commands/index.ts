@@ -210,7 +210,7 @@ const config = command(
     const guildId = interaction.guild!.id;
     if (subcommand === 'view') {
       const current = store.get(guildId);
-      await interaction.reply({ content: `Prefix: \`${current.prefix}\`\nLog channel: ${current.logChannelId ? `<#${current.logChannelId}>` : 'not set'}\nWelcome channel: ${current.welcomeChannelId ? `<#${current.welcomeChannelId}>` : 'not set'}\nAutomod: ${current.autoModEnabled ? 'enabled' : 'disabled'}\nBlocked words: ${current.blockedWords.length}`, ephemeral: true });
+      await interaction.reply({ content: `Command mode: slash commands only\nLog channel: ${current.logChannelId ? `<#${current.logChannelId}>` : 'not set'}\nWelcome channel: ${current.welcomeChannelId ? `<#${current.welcomeChannelId}>` : 'not set'}\nAutomod: ${current.autoModEnabled ? 'enabled' : 'disabled'}\nBlocked words: ${current.blockedWords.length}`, ephemeral: true });
     } else if (subcommand === 'log-channel') {
       const channel = interaction.options.getChannel('channel', true);
       await store.update(guildId, { logChannelId: channel.id });

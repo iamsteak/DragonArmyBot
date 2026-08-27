@@ -1,6 +1,6 @@
 # Dragon Army Bot
 
-Dragon Army Bot is a modular Discord moderation and utility bot built with **TypeScript** and **discord.js**. It provides a focused, self-hostable foundation inspired by the day-to-day server administration workflow of Carl-bot and Dyno.
+Dragon Army Bot is a **slash-command-only** Discord moderation and utility bot built with TypeScript and discord.js. It provides a focused, self-hostable foundation inspired by the day-to-day server administration workflow of Carl-bot and Dyno.
 
 ## Included capabilities
 
@@ -14,40 +14,57 @@ Dragon Army Bot is a modular Discord moderation and utility bot built with **Typ
 | Custom responses | `/custom-command set`, `/custom-command remove`, `/custom-command list`, and `/custom name` |
 | Utilities | `/help`, `/ping`, `/server`, and `/userinfo` |
 
-This is an MVP rather than a clone of every Carl-bot or Dyno feature. The architecture is intentionally modular so ticketing, reaction roles, giveaways, scheduled reminders, and a web dashboard can be added without rewriting the command runtime.
+This is an MVP rather than a clone of every Carl-bot or Dyno feature. The architecture is modular so ticketing, reaction roles, giveaways, scheduled reminders, and a web dashboard can be added later.
 
-## Requirements
+## Local development
 
-You need Node.js 20 or later, a Discord application with a bot user, and a server where you have permission to install applications. The bot requires the `Guilds`, `Guild Members`, `Guild Messages`, and `Message Content` privileged gateway intents. Enable the privileged intents in the Discord Developer Portal before starting the bot.
-
-## Installation
+You need Node.js 20 or later and a Discord application with a bot user. Enable the `Guilds`, `Guild Members`, `Guild Messages`, and `Message Content` privileged gateway intents in the Discord Developer Portal.
 
 ```bash
 pnpm install
 cp .env.example .env
 ```
 
-Fill in `DISCORD_TOKEN` and `DISCORD_CLIENT_ID`. Set `DISCORD_GUILD_ID` during development to register commands in one server immediately. Leave it blank for global registration; Discord may take time to propagate global commands.
+Edit `.env` with your credentials:
 
-Register commands and start the bot:
+```env
+DISCORD_TOKEN=your_replacement_bot_token
+DISCORD_CLIENT_ID=your_application_client_id
+DISCORD_GUILD_ID=your_test_server_id
+```
+
+`DISCORD_GUILD_ID` is optional, but recommended during development because guild commands update quickly. Leave it blank when registering global commands.
+
+Register commands and run locally:
 
 ```bash
 pnpm register
 pnpm dev
 ```
 
-For production:
+## Wispbyte deployment
 
-```bash
-pnpm build
-pnpm start
-```
+Wispbyte does not need a committed `.env` file. Upload or synchronize the repository files, then use the Wispbyte panel’s startup/environment settings.
 
-The bot stores per-server settings in `data/config.json`. This file is intentionally ignored by Git because it contains server configuration and is runtime state.
+| Wispbyte setting | Value |
+| --- | --- |
+| Runtime | Node.js 20 or newer |
+| Install command | `npm install` or the panel’s automatic package installation |
+| Startup command | `npm start` |
+| Required environment variable | `DISCORD_TOKEN` or `BOT_TOKEN` |
+| Optional environment variable | `DISCORD_CLIENT_ID` or `CLIENT_ID` |
+| Optional environment variable | `DISCORD_GUILD_ID` |
+| Optional environment variable | `DATA_FILE=./data/config.json` |
+
+The package’s `start` script runs `tsx src/index.ts`, so Wispbyte can start the project directly after installing the dependencies. If you prefer a compiled deployment, run `npm run build` and change the startup command to `node dist/index.js`.
+
+Add the token in Wispbyte’s environment-variable panel, not in GitHub. The token previously pasted into chat should be revoked and replaced before use. Keep the `data` directory persistent if you want server configuration to survive restarts or file synchronization.
+
+After the bot starts, run `npm run register` once from the Wispbyte console or a local machine with the same environment variables. If `DISCORD_GUILD_ID` is present, commands are registered in that server immediately. If it is absent, commands are registered globally and may take time to appear.
 
 ## Recommended Discord permissions
 
-Install the bot with the minimum permissions needed by your server. For the full included feature set, the bot generally needs View Channels, Send Messages, Embed Links, Read Message History, Manage Messages, Moderate Members, Kick Members, Ban Members, and Manage Channels only if future modules are enabled. Keep the bot’s role below roles that it should not be able to moderate.
+Install the bot with the minimum permissions needed by your server. For the included feature set, it generally needs View Channels, Send Messages, Embed Links, Read Message History, Manage Messages, Moderate Members, Kick Members, and Ban Members. Keep the bot’s role below roles that it should not be able to moderate.
 
 ## Command examples
 
@@ -62,19 +79,17 @@ Install the bot with the minimum permissions needed by your server. For the full
 /purge amount:25
 ```
 
-## Hosting choices
-
-The bot must run continuously to receive Discord gateway events. A local computer is the simplest free option if it can remain online. A managed always-on Node.js service is more reliable for production and avoids requiring your own computer to stay online. A conventional cloud VM is appropriate when you need Docker, root access, a fixed IP, or other operating-system-level control. Keep the token in the host’s secret manager or environment variables; never commit it to the repository.
-
-## Development notes
-
-The command definitions live in `src/commands/index.ts`, event handling lives in `src/index.ts`, and the JSON persistence layer lives in `src/lib/store.ts`. The project uses strict TypeScript checks and includes tests for the persistence layer and duration parsing.
+## Development checks
 
 ```bash
 ./node_modules/.bin/tsc -p tsconfig.json --noEmit
 ./node_modules/.bin/vitest run
 ```
 
-## Safety and limitations
+The command definitions live in `src/commands/index.ts`, event handling lives in `src/index.ts`, and JSON persistence lives in `src/lib/store.ts`. The project uses strict TypeScript checks and includes tests for the persistence layer and duration parsing.
 
-Moderation actions are protected by Discord permissions and role hierarchy checks. The bot does not attempt to bypass Discord’s permission model. Automod currently uses simple case-insensitive substring matching, so server staff should review blocked phrases carefully. Before public deployment, add rate limits, a database backend, structured audit records, and a dashboard if the bot will serve many servers.
+## References
+
+[1]: https://wispbyte.com/blog/discord-bot-hosting "Complete Guide to Hosting Discord Bots on Wispbyte"
+
+[2]: https://wispbyte.com/kb/getting-started "Wispbyte Knowledge Base: Getting Started"
