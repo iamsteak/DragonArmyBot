@@ -27,7 +27,8 @@ if not TOKEN:
     raise RuntimeError("Missing DISCORD_TOKEN (or BOT_TOKEN) environment variable.")
 
 GUILD_ID_RAW = os.getenv("DISCORD_GUILD_ID", "").strip()
-GUILD_ID = GUILD_ID_RAW if GUILD_ID_RAW and GUILD_ID_RAW.casefold() not in {"global", "none", "all", "0"} else None
+GUILD_ID = GUILD_ID_RAW or None
+REGISTER_GLOBAL = os.getenv("REGISTER_GLOBAL", "true").strip().casefold() not in {"0", "false", "no", "off"}
 DATA_FILE = Path(os.getenv("DATA_FILE", "data/config.json"))
 
 
@@ -131,7 +132,7 @@ async def on_ready() -> None:
     global _sync_complete
     if _sync_complete:
         return
-    if GUILD_ID:
+    if GUILD_ID and not REGISTER_GLOBAL:
         guild = discord.Object(id=int(GUILD_ID))
         bot.tree.copy_global_to(guild=guild)
         synced = await bot.tree.sync(guild=guild)

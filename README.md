@@ -12,10 +12,11 @@ Upload this project or import the GitHub repository into Pella. Set the runtime 
 | Install command | `pip install -r requirements.txt` |
 | Startup command | `python main.py` |
 | Required environment variable | `DISCORD_TOKEN=your_new_bot_token` |
-| Pella-required global mode | `DISCORD_GUILD_ID=global` |
+| JustRunMy Guild ID | `DISCORD_GUILD_ID=your_numeric_server_id` |
+| Global command switch | `REGISTER_GLOBAL=true` |
 | Optional environment variable | `DATA_FILE=data/config.json` |
 
-Only `DISCORD_TOKEN` is needed to start the bot. If Pella requires a Guild ID value but you want commands everywhere, set `DISCORD_GUILD_ID` to `global`. The bot treats `global`, `none`, `all`, and `0` as global registration mode. A real numeric server ID registers commands instantly in only that test server. Keep the `data` directory persistent so both `config.json` and `economy.json` survive restarts.
+Only `DISCORD_TOKEN` is needed to start the bot. JustRunMy may require a numeric Guild ID, so enter your server ID there and set `REGISTER_GLOBAL=true`. With `REGISTER_GLOBAL=true`, the numeric Guild ID is accepted for the hosting panel but the bot registers slash commands globally. Set `REGISTER_GLOBAL=false` only when you intentionally want fast registration in one server. Keep the `data` directory persistent so both `config.json` and `economy.json` survive restarts.
 
 Do not put a real token in GitHub or the ZIP file. The token previously pasted into chat should be revoked and replaced before use. The public Pella pages advertise Python/Node.js Discord hosting and GitHub integration [1] [2], but do not document automatic two-way commits from Pella’s dashboard back to GitHub. Treat GitHub as the source repository and Pella as the deployment target.
 
