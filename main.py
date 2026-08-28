@@ -622,6 +622,18 @@ async def economy_leaderboard(interaction: discord.Interaction) -> None:
     await interaction.response.send_message("**Dragon Army Rich List**\\n" + "\\n".join(lines))
 
 
+@economy_group.command(name="server-leaderboard", description="View the richest players in this server")
+@app_commands.guild_only()
+async def economy_server_leaderboard(interaction: discord.Interaction) -> None:
+    member_ids = {member.id for member in interaction.guild.members if not member.bot}
+    rows = economy.server_leaderboard(member_ids)
+    if not rows:
+        await interaction.response.send_message("No server players have an economy profile yet. Start with `/economy daily`!")
+        return
+    lines = [f"**{index}.** <@{user_id}> — {economy.wealth(profile):,} coins" for index, (user_id, profile) in enumerate(rows, start=1)]
+    await interaction.response.send_message(f"**{interaction.guild.name} Server Rich List**\\n" + "\\n".join(lines))
+
+
 @economy_group.command(name="quest", description="View your rotating economy quests")
 async def economy_quest(interaction: discord.Interaction) -> None:
     profile = economy.get(interaction.user.id)

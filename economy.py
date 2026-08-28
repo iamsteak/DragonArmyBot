@@ -197,9 +197,18 @@ class EconomyStore:
             progress[quest] = progress.get(quest, 0) + 1
             await self.save()
 
+    @staticmethod
+    def wealth(profile: dict[str, Any]) -> int:
+        return profile.get("wallet", 0) + profile.get("bank", 0)
+
     def leaderboard(self, limit: int = 10) -> list[tuple[str, dict[str, Any]]]:
         users = self.data.get("users", {})
-        return sorted(users.items(), key=lambda pair: pair[1].get("wallet", 0) + pair[1].get("bank", 0), reverse=True)[:limit]
+        return sorted(users.items(), key=lambda pair: self.wealth(pair[1]), reverse=True)[:limit]
+
+    def server_leaderboard(self, user_ids: set[int], limit: int = 10) -> list[tuple[str, dict[str, Any]]]:
+        users = self.data.get("users", {})
+        rows = [(user_id, profile) for user_id, profile in users.items() if int(user_id) in user_ids]
+        return sorted(rows, key=lambda pair: self.wealth(pair[1]), reverse=True)[:limit]
 
     @staticmethod
     def roll_game(game: str, has_lucky_charm: bool = False) -> tuple[str, int]:

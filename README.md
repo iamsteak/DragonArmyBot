@@ -46,7 +46,7 @@ Every player starts with 100 coins. The economy is stored persistently in `data/
 | Shop | `/economy shop`, `/economy buy`, and `/economy use` for 23 items with active and passive effects, including bank cards |
 | Social | `/economy pay` lets players transfer wallet coins to each other |
 | Progression | `/economy quest` tracks work, game, and fishing goals; XP unlocks levels |
-| Competition | `/economy leaderboard` ranks players by wallet plus bank wealth |
+| Competition | `/economy leaderboard` is global; `/economy server-leaderboard` ranks only members of the current server |
 
 The earning activities use cooldowns, randomized rewards, rare drops, item bonuses, and XP progression. Gambling commands have bounded wager ranges and do not use real money. The economy intentionally uses virtual coins only. Every player starts with a **20,000-coin bank limit**. `/economy bank-balance` shows current usage and remaining capacity, while `/economy deposit` and `/economy withdraw` move coins between wallet and bank.
 
