@@ -39,16 +39,16 @@ Every player starts with 100 coins. The economy is stored persistently in `data/
 
 | Feature | Commands and gameplay |
 | --- | --- |
-| Account | `/economy balance`, `/economy deposit`, `/economy withdraw`, `/economy inventory` |
+| Account | `/economy balance`, `/economy bank-balance`, `/economy deposit`, `/economy withdraw`, `/economy inventory` |
 | Earning | `/economy daily`, `/economy work`, `/economy fish`, `/economy mine`, `/economy hunt` |
 | Games | `/economy slots` and `/economy coinflip` with cooldowns and wager limits |
 | Risk and defense | `/economy rob` attacks a wallet and `/economy hack` attacks a bank; Firewalls, VPNs, Security Cameras, Dragon Armor, Decoy Wallets, and Insurance defend players |
-| Shop | `/economy shop`, `/economy buy`, and `/economy use` for 20 items with active and passive effects |
+| Shop | `/economy shop`, `/economy buy`, and `/economy use` for 23 items with active and passive effects, including bank cards |
 | Social | `/economy pay` lets players transfer wallet coins to each other |
 | Progression | `/economy quest` tracks work, game, and fishing goals; XP unlocks levels |
 | Competition | `/economy leaderboard` ranks players by wallet plus bank wealth |
 
-The earning activities use cooldowns, randomized rewards, rare drops, item bonuses, and XP progression. Gambling commands have bounded wager ranges and do not use real money. The economy intentionally uses virtual coins only.
+The earning activities use cooldowns, randomized rewards, rare drops, item bonuses, and XP progression. Gambling commands have bounded wager ranges and do not use real money. The economy intentionally uses virtual coins only. Every player starts with a **20,000-coin bank limit**. `/economy bank-balance` shows current usage and remaining capacity, while `/economy deposit` and `/economy withdraw` move coins between wallet and bank.
 
 ## Twenty-item shop
 
@@ -76,6 +76,9 @@ Use `/economy shop` to browse the catalog and `/economy buy item:<key>` to purch
 | `medkit` | Consumable emergency coin recovery |
 | `guild_banner` | Progression collectible |
 | `crown` | Prestige collectible |
+| `bank_card` | Use to add 10,000 bank capacity |
+| `gold_bank_card` | Use to add 25,000 bank capacity |
+| `platinum_bank_card` | Use to add 100,000 bank capacity |
 
 Players can use `/economy rob user:@member` to attempt a capped wallet robbery or `/economy hack user:@member` to attempt a capped bank extraction. Both commands have cooldowns, bounded rewards, and item-based defenses. No real money or external payment system is involved.
 

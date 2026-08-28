@@ -26,6 +26,9 @@ SHOP: dict[str, dict[str, Any]] = {
     "insurance": {"name": "Coin Insurance", "price": 2000, "description": "Reduces the next robbery or hack loss."},
     "medkit": {"name": "Medkit", "price": 500, "description": "Consumable: restores 250 lost wallet coins."},
     "guild_banner": {"name": "Guild Banner", "price": 3000, "description": "Adds extra XP to future activities."},
+    "bank_card": {"name": "Bank Card", "price": 2500, "description": "Use it to increase your bank limit by 10,000 coins."},
+    "gold_bank_card": {"name": "Gold Bank Card", "price": 6500, "description": "Use it to increase your bank limit by 25,000 coins."},
+    "platinum_bank_card": {"name": "Platinum Bank Card", "price": 15000, "description": "Use it to increase your bank limit by 100,000 coins."},
     "crown": {"name": "Dragon Crown", "price": 5000, "description": "A prestige collectible for the richest adventurers."},
 }
 
@@ -52,6 +55,7 @@ class EconomyStore:
             users[key] = {
                 "wallet": 100,
                 "bank": 0,
+                "bank_limit": 20_000,
                 "xp": 0,
                 "level": 1,
                 "inventory": {},
@@ -61,6 +65,7 @@ class EconomyStore:
         user = users[key]
         user.setdefault("wallet", 100)
         user.setdefault("bank", 0)
+        user.setdefault("bank_limit", 20_000)
         user.setdefault("xp", 0)
         user.setdefault("level", 1)
         user.setdefault("inventory", {})
@@ -143,7 +148,7 @@ class EconomyStore:
     async def deposit(self, user_id: int, amount: int) -> bool:
         async with self.lock:
             user = self.get(user_id)
-            if amount <= 0 or user["wallet"] < amount:
+            if amount <= 0 or user["wallet"] < amount or user["bank"] + amount > user["bank_limit"]:
                 return False
             user["wallet"] -= amount
             user["bank"] += amount

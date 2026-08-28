@@ -431,7 +431,7 @@ async def economy_balance(interaction: discord.Interaction, user: discord.User |
     profile = economy.get(target.id)
     total = profile["wallet"] + profile["bank"]
     await interaction.response.send_message(
-        f"**{target.display_name}'s account**\\nWallet: **{profile['wallet']:,}** coins\\nBank: **{profile['bank']:,}** coins\\nNet worth: **{total:,}** coins\\nLevel: **{profile['level']}** ({profile['xp']:,} XP)",
+        f"**{target.display_name}'s account**\\nWallet: **{profile['wallet']:,}** coins\\nBank: **{profile['bank']:,} / {profile['bank_limit']:,}** coins\\nNet worth: **{total:,}** coins\\nLevel: **{profile['level']}** ({profile['xp']:,} XP)",
     )
 
 
@@ -587,10 +587,21 @@ async def economy_pay(interaction: discord.Interaction, user: discord.User, amou
 
 @economy_group.command(name="deposit", description="Move wallet coins into your bank")
 async def economy_deposit(interaction: discord.Interaction, amount: app_commands.Range[int, 1, 1000000]) -> None:
+    profile = economy.get(interaction.user.id)
+    if profile["bank"] + amount > profile["bank_limit"]:
+        await interaction.response.send_message(f"That deposit exceeds your bank limit of **{profile['bank_limit']:,}** coins. Buy and use a bank card to increase it.", ephemeral=True)
+        return
     if not await economy.deposit(interaction.user.id, amount):
         await interaction.response.send_message("You do not have enough wallet coins.", ephemeral=True)
         return
     await interaction.response.send_message(f"Deposited **{amount:,}** coins into your bank.")
+
+
+@economy_group.command(name="bank-balance", description="View your bank balance and limit")
+async def economy_bank_balance(interaction: discord.Interaction) -> None:
+    profile = economy.get(interaction.user.id)
+    available = profile["bank_limit"] - profile["bank"]
+    await interaction.response.send_message(f"Bank balance: **{profile['bank']:,} / {profile['bank_limit']:,}** coins. Available space: **{available:,}** coins.")
 
 
 @economy_group.command(name="withdraw", description="Move bank coins into your wallet")
@@ -683,10 +694,20 @@ async def unban(interaction: discord.Interaction, user_id: str) -> None:
 
 
 @economy_group.command(name="use", description="Use a consumable economy item")
-@app_commands.describe(item="Item key, such as coffee, energy_drink, golden_ticket, or medkit")
+@app_commands.describe(item="Item key, such as bank_card, coffee, firewall, or medkit")
 async def economy_use(interaction: discord.Interaction, item: str) -> None:
     key = item.casefold()
     consumables = {"coffee", "energy_drink", "golden_ticket", "medkit"}
+    bank_cards = {"bank_card": 10_000, "gold_bank_card": 25_000, "platinum_bank_card": 100_000}
+    if key in bank_cards:
+        if not await economy.consume_item(interaction.user.id, key):
+            await interaction.response.send_message("You do not own that bank card.", ephemeral=True)
+            return
+        profile = economy.get(interaction.user.id)
+        profile["bank_limit"] += bank_cards[key]
+        await economy.save()
+        await interaction.response.send_message(f"{SHOP[key]['name']} activated. Your bank limit is now **{profile['bank_limit']:,}** coins.")
+        return
     if key not in consumables:
         await interaction.response.send_message("That item is passive or activates automatically. Check `/economy shop`.", ephemeral=True)
         return

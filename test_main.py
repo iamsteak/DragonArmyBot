@@ -20,6 +20,11 @@ class BotHelpersTest(unittest.TestCase):
         self.assertEqual(config["blocked_words"], [])
         self.assertEqual(config["custom_commands"], {})
 
+    def test_default_bank_limit(self) -> None:
+        from economy import EconomyStore
+        store = EconomyStore(__import__("pathlib").Path("/tmp/dragon-army-test-economy.json"))
+        self.assertEqual(store.get(12345)["bank_limit"], 20_000)
+
     def test_economy_progression(self) -> None:
         self.assertEqual(EconomyStore.level_for_xp(0), 1)
         self.assertEqual(EconomyStore.level_for_xp(100), 2)
@@ -28,7 +33,9 @@ class BotHelpersTest(unittest.TestCase):
         self.assertEqual(multiplier, 2)
 
     def test_shop_catalog(self) -> None:
-        self.assertEqual(len(SHOP), 20)
+        self.assertEqual(len(SHOP), 23)
+        for item in ("bank_card", "gold_bank_card", "platinum_bank_card"):
+            self.assertIn(item, SHOP)
         for item in ("lockpick", "hacker_kit", "firewall", "vpn", "security_camera", "dragon_armor"):
             self.assertIn(item, SHOP)
 
