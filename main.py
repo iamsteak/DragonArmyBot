@@ -433,7 +433,7 @@ async def economy_balance(interaction: discord.Interaction, user: discord.User |
     profile = economy.get(target.id)
     total = profile["wallet"] + profile["bank"]
     await interaction.response.send_message(
-        f"**{target.display_name}'s account**\\nWallet: **{profile['wallet']:,}** coins\\nBank: **{profile['bank']:,} / {profile['bank_limit']:,}** coins\\nNet worth: **{total:,}** coins\\nLevel: **{profile['level']}** ({profile['xp']:,} XP)",
+        f"**{target.display_name}'s account**\nWallet: **{profile['wallet']:,}** coins\nBank: **{profile['bank']:,} / {profile['bank_limit']:,}** coins\nNet worth: **{total:,}** coins\nLevel: **{profile['level']}** ({profile['xp']:,} XP)",
     )
 
 
@@ -525,7 +525,7 @@ async def economy_slots(interaction: discord.Interaction, bet: app_commands.Rang
     winnings = bet * multiplier
     profile, level_up = await economy.award(interaction.user.id, coins=winnings, xp=10)
     await economy.progress(interaction.user.id, "games")
-    message = f"**{result}**\\n"
+    message = f"**{result}**\n"
     message += f"Jackpot! You won **{winnings:,}** coins!" if multiplier else f"You lost **{bet:,}** coins."
     message += f" Wallet: **{profile['wallet']:,}**."
     await interaction.response.send_message(message)
@@ -550,7 +550,7 @@ async def economy_coinflip(interaction: discord.Interaction, choice: app_command
 @economy_group.command(name="shop", description="View the coin shop")
 async def economy_shop(interaction: discord.Interaction) -> None:
     lines = [f"**{key}** — {item['price']:,} coins — {item['description']}" for key, item in SHOP.items()]
-    await interaction.response.send_message("**Dragon Army Shop**\\n" + "\\n".join(lines), ephemeral=True)
+    await interaction.response.send_message("**Dragon Army Shop**\n" + "\n".join(lines), ephemeral=True)
 
 
 @economy_group.command(name="buy", description="Buy an item from the coin shop")
@@ -571,7 +571,7 @@ async def economy_buy(interaction: discord.Interaction, item: str) -> None:
 @economy_group.command(name="inventory", description="View your inventory")
 async def economy_inventory(interaction: discord.Interaction) -> None:
     inventory = economy.get(interaction.user.id).get("inventory", {})
-    text = "\\n".join(f"- **{SHOP.get(key, {'name': key})['name']}** x{amount}" for key, amount in inventory.items())
+    text = "\n".join(f"- **{SHOP.get(key, {'name': key})['name']}** x{amount}" for key, amount in inventory.items())
     await interaction.response.send_message(text or "Your inventory is empty. Visit `/economy shop`.", ephemeral=True)
 
 
@@ -621,7 +621,7 @@ async def economy_leaderboard(interaction: discord.Interaction) -> None:
         await interaction.response.send_message("No players yet. Start with `/economy daily`!")
         return
     lines = [f"**{index}.** <@{user_id}> — {profile.get('wallet', 0) + profile.get('bank', 0):,} coins" for index, (user_id, profile) in enumerate(rows, start=1)]
-    await interaction.response.send_message("**Dragon Army Rich List**\\n" + "\\n".join(lines))
+    await interaction.response.send_message("**Dragon Army Rich List**\n" + "\n".join(lines))
 
 
 @economy_group.command(name="server-leaderboard", description="View the richest players in this server")
@@ -633,7 +633,7 @@ async def economy_server_leaderboard(interaction: discord.Interaction) -> None:
         await interaction.response.send_message("No server players have an economy profile yet. Start with `/economy daily`!")
         return
     lines = [f"**{index}.** <@{user_id}> — {economy.wealth(profile):,} coins" for index, (user_id, profile) in enumerate(rows, start=1)]
-    await interaction.response.send_message(f"**{interaction.guild.name} Server Rich List**\\n" + "\\n".join(lines))
+    await interaction.response.send_message(f"**{interaction.guild.name} Server Rich List**\n" + "\n".join(lines))
 
 
 @economy_group.command(name="quest", description="View your rotating economy quests")
@@ -641,7 +641,7 @@ async def economy_quest(interaction: discord.Interaction) -> None:
     profile = economy.get(interaction.user.id)
     progress = profile.get("quest_progress", {})
     lines = [f"Work **{min(progress.get('work', 0), 5)}/5** — reward 500 coins", f"Play games **{min(progress.get('games', 0), 3)}/3** — reward 350 coins", f"Fish **{min(progress.get('fish', 0), 3)}/3** — reward 450 coins"]
-    await interaction.response.send_message("**Daily Guild Quests**\\n" + "\\n".join(lines) + "\\nComplete them during your adventures to track progress.", ephemeral=True)
+    await interaction.response.send_message("**Daily Guild Quests**\n" + "\n".join(lines) + "\nComplete them during your adventures to track progress.", ephemeral=True)
 
 
 @bot.tree.command(name="slowmode", description="Set the current channel slowmode")
