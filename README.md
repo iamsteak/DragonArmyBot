@@ -42,12 +42,42 @@ Every player starts with 100 coins. The economy is stored persistently in `data/
 | Account | `/economy balance`, `/economy deposit`, `/economy withdraw`, `/economy inventory` |
 | Earning | `/economy daily`, `/economy work`, `/economy fish`, `/economy mine`, `/economy hunt` |
 | Games | `/economy slots` and `/economy coinflip` with cooldowns and wager limits |
-| Shop | `/economy shop` and `/economy buy` for Coffee, Lucky Charms, Fishing Rods, Pickaxes, and Crowns |
+| Risk and defense | `/economy rob` attacks a wallet and `/economy hack` attacks a bank; Firewalls, VPNs, Security Cameras, Dragon Armor, Decoy Wallets, and Insurance defend players |
+| Shop | `/economy shop`, `/economy buy`, and `/economy use` for 20 items with active and passive effects |
 | Social | `/economy pay` lets players transfer wallet coins to each other |
 | Progression | `/economy quest` tracks work, game, and fishing goals; XP unlocks levels |
 | Competition | `/economy leaderboard` ranks players by wallet plus bank wealth |
 
 The earning activities use cooldowns, randomized rewards, rare drops, item bonuses, and XP progression. Gambling commands have bounded wager ranges and do not use real money. The economy intentionally uses virtual coins only.
+
+## Twenty-item shop
+
+Use `/economy shop` to browse the catalog and `/economy buy item:<key>` to purchase an item. Consumables are activated with `/economy use item:<key>`. Defensive items activate automatically when another player attacks you.
+
+| Item | Use |
+| --- | --- |
+| `coffee` | Consumable reward boost |
+| `energy_drink` | Resets your work cooldown |
+| `lucky_charm` | Improves slot-machine odds |
+| `sapphire_dice` | Improves coinflip payouts |
+| `fishing_rod` | Improves fishing rewards |
+| `pickaxe` | Improves mining rewards |
+| `hunter_charm` | Improves hunting rewards |
+| `golden_ticket` | Consumable coin bonus |
+| `backpack` | Progression collectible |
+| `lockpick` | Improves one `/economy rob` attempt |
+| `hacker_kit` | Improves one `/economy hack` attempt |
+| `firewall` | Blocks one incoming hack |
+| `vpn` | Blocks one incoming hack |
+| `security_camera` | Blocks one incoming robbery |
+| `decoy_wallet` | Reduces one robbery loss |
+| `dragon_armor` | Blocks one robbery or hack |
+| `insurance` | Reduces one robbery or hack loss |
+| `medkit` | Consumable emergency coin recovery |
+| `guild_banner` | Progression collectible |
+| `crown` | Prestige collectible |
+
+Players can use `/economy rob user:@member` to attempt a capped wallet robbery or `/economy hack user:@member` to attempt a capped bank extraction. Both commands have cooldowns, bounded rewards, and item-based defenses. No real money or external payment system is involved.
 
 ## Local setup
 

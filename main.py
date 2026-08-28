@@ -503,6 +503,8 @@ async def economy_hunt(interaction: discord.Interaction) -> None:
         await interaction.response.send_message(f"The forest is quiet. Try again in **{remaining}s**.", ephemeral=True)
         return
     result = random.choices([("rabbit", 100), ("boar", 280), ("griffin feather", 1000), ("dragon scale", 2500)], weights=[50, 30, 16, 4])[0]
+    if economy.get(interaction.user.id).get("inventory", {}).get("hunter_charm", 0) > 0:
+        result = (result[0], int(result[1] * 1.30))
     profile, level_up = await economy.award(interaction.user.id, coins=result[1], xp=35)
     await interaction.response.send_message(f"Your hunt found a **{result[0]}** worth **{result[1]:,}** coins. Wallet: **{profile['wallet']:,}**." + (f" Level up to **{profile['level']}**!" if level_up else ""))
 
@@ -517,7 +519,7 @@ async def economy_slots(interaction: discord.Interaction, bet: app_commands.Rang
     if not await economy.spend(interaction.user.id, bet):
         await interaction.response.send_message("You do not have enough wallet coins for that bet.", ephemeral=True)
         return
-    result, multiplier = EconomyStore.roll_game("slots")
+    result, multiplier = EconomyStore.roll_game("slots", has_lucky_charm=bool(economy.get(interaction.user.id).get("inventory", {}).get("lucky_charm", 0)))
     winnings = bet * multiplier
     profile, level_up = await economy.award(interaction.user.id, coins=winnings, xp=10)
     await economy.progress(interaction.user.id, "games")
@@ -536,7 +538,8 @@ async def economy_coinflip(interaction: discord.Interaction, choice: app_command
         return
     result = random.choice(["heads", "tails"])
     won = result == choice.value
-    winnings = bet * 2 if won else 0
+    has_dice = economy.get(interaction.user.id).get("inventory", {}).get("sapphire_dice", 0) > 0
+    winnings = bet * (3 if has_dice else 2) if won else 0
     profile, _ = await economy.award(interaction.user.id, coins=winnings, xp=8)
     await economy.progress(interaction.user.id, "games")
     await interaction.response.send_message(f"The coin landed on **{result}**. " + (f"You won **{winnings:,}** coins!" if won else f"You lost **{bet:,}** coins.") + f" Wallet: **{profile['wallet']:,}**.")
@@ -677,6 +680,113 @@ async def unban(interaction: discord.Interaction, user_id: str) -> None:
     user = await bot.fetch_user(int(user_id))
     await interaction.guild.unban(user, reason=f"Unbanned by {interaction.user}")
     await interaction.response.send_message(f"Unbanned **{user}**.")
+
+
+@economy_group.command(name="use", description="Use a consumable economy item")
+@app_commands.describe(item="Item key, such as coffee, energy_drink, golden_ticket, or medkit")
+async def economy_use(interaction: discord.Interaction, item: str) -> None:
+    key = item.casefold()
+    consumables = {"coffee", "energy_drink", "golden_ticket", "medkit"}
+    if key not in consumables:
+        await interaction.response.send_message("That item is passive or activates automatically. Check `/economy shop`.", ephemeral=True)
+        return
+    if not await economy.consume_item(interaction.user.id, key):
+        await interaction.response.send_message("You do not own that item.", ephemeral=True)
+        return
+    if key == "coffee":
+        profile, _ = await economy.award(interaction.user.id, coins=150, xp=8)
+        text = f"You drank Coffee and earned a quick **150** coins. Wallet: **{profile['wallet']:,}**."
+    elif key == "energy_drink":
+        await economy.reset_cooldown(interaction.user.id, "work")
+        text = "Energy Drink activated. Your `/economy work` cooldown is ready again."
+    elif key == "golden_ticket":
+        profile, _ = await economy.award(interaction.user.id, coins=350, xp=15)
+        text = f"Golden Ticket redeemed for **350** coins. Wallet: **{profile['wallet']:,}**."
+    else:
+        profile, _ = await economy.award(interaction.user.id, coins=250, xp=5)
+        text = f"Medkit sold for **250** emergency coins. Wallet: **{profile['wallet']:,}**."
+    await interaction.response.send_message(text)
+
+
+@economy_group.command(name="rob", description="Attempt to rob another player’s wallet")
+@app_commands.guild_only()
+@app_commands.describe(user="Player to rob")
+async def economy_rob(interaction: discord.Interaction, user: discord.Member) -> None:
+    if user.bot or user.id == interaction.user.id:
+        await interaction.response.send_message("Choose another human player.", ephemeral=True)
+        return
+    remaining = await economy.cooldown(interaction.user.id, "rob", 90)
+    if remaining:
+        await interaction.response.send_message(f"Your next robbery is ready in **{remaining}s**.", ephemeral=True)
+        return
+    target_profile = economy.get(user.id)
+    target_inventory = target_profile.get("inventory", {})
+    for defense in ("dragon_armor", "security_camera"):
+        if target_inventory.get(defense, 0) > 0:
+            await economy.consume_item(user.id, defense)
+            await interaction.response.send_message(f"Robbery blocked! {user.mention} used **{SHOP[defense]['name']}**.")
+            return
+    attacker_profile = economy.get(interaction.user.id)
+    chance = 0.38
+    if attacker_profile.get("inventory", {}).get("lockpick", 0) > 0:
+        await economy.consume_item(interaction.user.id, "lockpick")
+        chance += 0.18
+    if random.random() > chance:
+        await interaction.response.send_message("The robbery failed and the guards are now alert.")
+        return
+    available = target_profile["wallet"]
+    if available < 20:
+        await interaction.response.send_message("That player’s wallet is too empty to rob.", ephemeral=True)
+        return
+    amount = min(max(20, int(available * random.uniform(0.10, 0.25))), 1200)
+    reduction = 1.0
+    if target_inventory.get("decoy_wallet", 0) > 0:
+        await economy.consume_item(user.id, "decoy_wallet")
+        reduction *= 0.5
+    if target_inventory.get("insurance", 0) > 0:
+        await economy.consume_item(user.id, "insurance")
+        reduction *= 0.65
+    amount = max(1, int(amount * reduction))
+    await economy.steal(interaction.user.id, user.id, amount, source="wallet")
+    await interaction.response.send_message(f"Robbery successful! You stole **{amount:,}** coins from {user.mention}.")
+
+
+@economy_group.command(name="hack", description="Attempt to hack another player’s bank")
+@app_commands.guild_only()
+@app_commands.describe(user="Player to hack")
+async def economy_hack(interaction: discord.Interaction, user: discord.Member) -> None:
+    if user.bot or user.id == interaction.user.id:
+        await interaction.response.send_message("Choose another human player.", ephemeral=True)
+        return
+    remaining = await economy.cooldown(interaction.user.id, "hack", 120)
+    if remaining:
+        await interaction.response.send_message(f"Your next hack is ready in **{remaining}s**.", ephemeral=True)
+        return
+    target_profile = economy.get(user.id)
+    target_inventory = target_profile.get("inventory", {})
+    for defense in ("dragon_armor", "firewall", "vpn"):
+        if target_inventory.get(defense, 0) > 0:
+            await economy.consume_item(user.id, defense)
+            await interaction.response.send_message(f"Hack blocked! {user.mention} used **{SHOP[defense]['name']}**.")
+            return
+    attacker_profile = economy.get(interaction.user.id)
+    chance = 0.28
+    if attacker_profile.get("inventory", {}).get("hacker_kit", 0) > 0:
+        await economy.consume_item(interaction.user.id, "hacker_kit")
+        chance += 0.22
+    if random.random() > chance:
+        await interaction.response.send_message("Hack failed. The target’s bank security held.")
+        return
+    available = target_profile["bank"]
+    if available < 50:
+        await interaction.response.send_message("That player’s bank has too little balance to hack.", ephemeral=True)
+        return
+    amount = min(max(50, int(available * random.uniform(0.08, 0.20))), 1500)
+    if target_inventory.get("insurance", 0) > 0:
+        await economy.consume_item(user.id, "insurance")
+        amount = max(1, int(amount * 0.55))
+    await economy.steal(interaction.user.id, user.id, amount, source="bank")
+    await interaction.response.send_message(f"Hack successful! You extracted **{amount:,}** coins from {user.mention}’s bank.")
 
 
 bot.tree.add_command(config_group)

@@ -3,7 +3,7 @@ import unittest
 
 os.environ.setdefault("DISCORD_TOKEN", "test-token")
 
-from economy import EconomyStore  # noqa: E402
+from economy import EconomyStore, SHOP  # noqa: E402
 from main import default_config, parse_duration  # noqa: E402
 
 
@@ -26,6 +26,11 @@ class BotHelpersTest(unittest.TestCase):
         result, multiplier = EconomyStore.roll_game("coinflip")
         self.assertIn(result, {"heads", "tails"})
         self.assertEqual(multiplier, 2)
+
+    def test_shop_catalog(self) -> None:
+        self.assertEqual(len(SHOP), 20)
+        for item in ("lockpick", "hacker_kit", "firewall", "vpn", "security_camera", "dragon_armor"):
+            self.assertIn(item, SHOP)
 
 
 if __name__ == "__main__":
