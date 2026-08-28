@@ -26,7 +26,8 @@ TOKEN = os.getenv("DISCORD_TOKEN") or os.getenv("BOT_TOKEN")
 if not TOKEN:
     raise RuntimeError("Missing DISCORD_TOKEN (or BOT_TOKEN) environment variable.")
 
-GUILD_ID = os.getenv("DISCORD_GUILD_ID")
+GUILD_ID_RAW = os.getenv("DISCORD_GUILD_ID", "").strip()
+GUILD_ID = GUILD_ID_RAW if GUILD_ID_RAW and GUILD_ID_RAW.casefold() not in {"global", "none", "all", "0"} else None
 DATA_FILE = Path(os.getenv("DATA_FILE", "data/config.json"))
 
 
