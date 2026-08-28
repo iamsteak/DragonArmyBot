@@ -620,8 +620,15 @@ async def economy_leaderboard(interaction: discord.Interaction) -> None:
     if not rows:
         await interaction.response.send_message("No players yet. Start with `/economy daily`!")
         return
-    lines = [f"**{index}.** <@{user_id}> — {profile.get('wallet', 0) + profile.get('bank', 0):,} coins" for index, (user_id, profile) in enumerate(rows, start=1)]
-    await interaction.response.send_message("**Dragon Army Rich List**\n" + "\n".join(lines))
+    embed = discord.Embed(
+        title="Global Economy Leaderboard",
+        description="The richest Dragon Army players across every server.",
+        color=discord.Color.gold(),
+    )
+    for index, (user_id, profile) in enumerate(rows, start=1):
+        embed.add_field(name=f"#{index} • <@{user_id}>", value=f"**{economy.wealth(profile):,} coins**", inline=False)
+    embed.set_footer(text="Global ranking • wallet + bank wealth")
+    await interaction.response.send_message(embed=embed)
 
 
 @economy_group.command(name="server-leaderboard", description="View the richest players in this server")
@@ -632,8 +639,15 @@ async def economy_server_leaderboard(interaction: discord.Interaction) -> None:
     if not rows:
         await interaction.response.send_message("No server players have an economy profile yet. Start with `/economy daily`!")
         return
-    lines = [f"**{index}.** <@{user_id}> — {economy.wealth(profile):,} coins" for index, (user_id, profile) in enumerate(rows, start=1)]
-    await interaction.response.send_message(f"**{interaction.guild.name} Server Rich List**\n" + "\n".join(lines))
+    embed = discord.Embed(
+        title=f"{interaction.guild.name} Leaderboard",
+        description="The richest players in this server.",
+        color=discord.Color.blurple(),
+    )
+    for index, (user_id, profile) in enumerate(rows, start=1):
+        embed.add_field(name=f"#{index} • <@{user_id}>", value=f"**{economy.wealth(profile):,} coins**", inline=False)
+    embed.set_footer(text="Server ranking • wallet + bank wealth")
+    await interaction.response.send_message(embed=embed)
 
 
 @economy_group.command(name="quest", description="View your rotating economy quests")
