@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import random
 import re
 from datetime import timedelta
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Any
 
 import discord
 from discord import app_commands
+from economy import EconomyStore, SHOP
 from discord.ext import commands
 from dotenv import load_dotenv
 
@@ -80,6 +82,7 @@ class GuildStore:
 
 
 store = GuildStore(DATA_FILE)
+economy = EconomyStore(DATA_FILE.with_name("economy.json"))
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
@@ -87,6 +90,7 @@ bot = commands.Bot(command_prefix=commands.when_mentioned, intents=intents)
 config_group = app_commands.Group(name="config", description="Configure this server")
 automod_group = app_commands.Group(name="blockword", description="Manage blocked words")
 custom_group = app_commands.Group(name="custom-command", description="Manage custom server responses")
+economy_group = app_commands.Group(name="economy", description="Play the Dragon Army economy game")
 _sync_complete = False
 
 
@@ -421,13 +425,269 @@ async def custom(interaction: discord.Interaction, name: str) -> None:
     await interaction.response.send_message(response)
 
 
+@economy_group.command(name="balance", description="View a wallet and bank balance")
+async def economy_balance(interaction: discord.Interaction, user: discord.User | None = None) -> None:
+    target = user or interaction.user
+    profile = economy.get(target.id)
+    total = profile["wallet"] + profile["bank"]
+    await interaction.response.send_message(
+        f"**{target.display_name}'s account**\\nWallet: **{profile['wallet']:,}** coins\\nBank: **{profile['bank']:,}** coins\\nNet worth: **{total:,}** coins\\nLevel: **{profile['level']}** ({profile['xp']:,} XP)",
+    )
+
+
+@economy_group.command(name="daily", description="Claim your daily coins")
+async def economy_daily(interaction: discord.Interaction) -> None:
+    remaining = await economy.cooldown(interaction.user.id, "daily", 86_400)
+    if remaining:
+        await interaction.response.send_message(f"Your daily reward is ready in **{remaining // 3600}h {(remaining % 3600) // 60}m**.", ephemeral=True)
+        return
+    streak_bonus = random.randint(25, 100)
+    profile, level_up = await economy.award(interaction.user.id, coins=500 + streak_bonus, xp=30)
+    await interaction.response.send_message(f"Daily claimed: **{500 + streak_bonus:,}** coins. Wallet: **{profile['wallet']:,}**." + (f" Level up! You reached level **{profile['level']}**." if level_up else ""))
+
+
+async def earn_command(interaction: discord.Interaction, action: str, cooldown: int, low: int, high: int, xp: int, messages: list[str]) -> None:
+    remaining = await economy.cooldown(interaction.user.id, action, cooldown)
+    if remaining:
+        await interaction.response.send_message(f"Try again in **{remaining}s**.", ephemeral=True)
+        return
+    amount = random.randint(low, high)
+    profile, level_up = await economy.award(interaction.user.id, coins=amount, xp=xp)
+    text = f"{random.choice(messages)} You earned **{amount:,}** coins."
+    if level_up:
+        text += f" You leveled up to **{profile['level']}**!"
+    await interaction.response.send_message(text)
+
+
+@economy_group.command(name="work", description="Work a random job for coins")
+async def economy_work(interaction: discord.Interaction) -> None:
+    await earn_command(interaction, "work", 45, 80, 240, 20, ["You completed a delivery.", "You repaired a mech.", "You performed at the tavern.", "You solved a guild contract."])
+    await economy.progress(interaction.user.id, "work")
+
+
+@economy_group.command(name="fish", description="Go fishing for coins and rare loot")
+async def economy_fish(interaction: discord.Interaction) -> None:
+    remaining = await economy.cooldown(interaction.user.id, "fish", 30)
+    if remaining:
+        await interaction.response.send_message(f"Your fishing rod needs **{remaining}s** before the next cast.", ephemeral=True)
+        return
+    profile = economy.get(interaction.user.id)
+    catches = [("small fish", 90), ("salmon", 180), ("golden koi", 650), ("ancient pearl", 1500)]
+    name, value = random.choices(catches, weights=[55, 30, 12, 3])[0]
+    if profile["inventory"].get("fishing_rod"):
+        value = int(value * 1.35)
+    updated, level_up = await economy.award(interaction.user.id, coins=value, xp=25)
+    await economy.progress(interaction.user.id, "fish")
+    await interaction.response.send_message(f"You caught a **{name}** worth **{value:,}** coins. Wallet: **{updated['wallet']:,}**." + (f" Level up to **{updated['level']}**!" if level_up else ""))
+
+
+@economy_group.command(name="mine", description="Mine ore for coins")
+async def economy_mine(interaction: discord.Interaction) -> None:
+    remaining = await economy.cooldown(interaction.user.id, "mine", 35)
+    if remaining:
+        await interaction.response.send_message(f"Your arms are tired. Try again in **{remaining}s**.", ephemeral=True)
+        return
+    profile = economy.get(interaction.user.id)
+    ores = [("coal", 70), ("iron", 160), ("ruby", 500), ("dragon crystal", 1800)]
+    name, value = random.choices(ores, weights=[52, 30, 14, 4])[0]
+    if profile["inventory"].get("pickaxe"):
+        value = int(value * 1.35)
+    updated, level_up = await economy.award(interaction.user.id, coins=value, xp=28)
+    await interaction.response.send_message(f"You mined **{name}** worth **{value:,}** coins. Wallet: **{updated['wallet']:,}**." + (f" Level up to **{updated['level']}**!" if level_up else ""))
+
+
+@economy_group.command(name="hunt", description="Hunt a creature for a risky reward")
+async def economy_hunt(interaction: discord.Interaction) -> None:
+    remaining = await economy.cooldown(interaction.user.id, "hunt", 40)
+    if remaining:
+        await interaction.response.send_message(f"The forest is quiet. Try again in **{remaining}s**.", ephemeral=True)
+        return
+    result = random.choices([("rabbit", 100), ("boar", 280), ("griffin feather", 1000), ("dragon scale", 2500)], weights=[50, 30, 16, 4])[0]
+    profile, level_up = await economy.award(interaction.user.id, coins=result[1], xp=35)
+    await interaction.response.send_message(f"Your hunt found a **{result[0]}** worth **{result[1]:,}** coins. Wallet: **{profile['wallet']:,}**." + (f" Level up to **{profile['level']}**!" if level_up else ""))
+
+
+@economy_group.command(name="slots", description="Play the slot machine")
+@app_commands.describe(bet="Coins to wager")
+async def economy_slots(interaction: discord.Interaction, bet: app_commands.Range[int, 1, 1000]) -> None:
+    remaining = await economy.cooldown(interaction.user.id, "slots", 5)
+    if remaining:
+        await interaction.response.send_message("The slot machine is cooling down. Try again in a few seconds.", ephemeral=True)
+        return
+    if not await economy.spend(interaction.user.id, bet):
+        await interaction.response.send_message("You do not have enough wallet coins for that bet.", ephemeral=True)
+        return
+    result, multiplier = EconomyStore.roll_game("slots")
+    winnings = bet * multiplier
+    profile, level_up = await economy.award(interaction.user.id, coins=winnings, xp=10)
+    await economy.progress(interaction.user.id, "games")
+    message = f"**{result}**\\n"
+    message += f"Jackpot! You won **{winnings:,}** coins!" if multiplier else f"You lost **{bet:,}** coins."
+    message += f" Wallet: **{profile['wallet']:,}**."
+    await interaction.response.send_message(message)
+
+
+@economy_group.command(name="coinflip", description="Bet on heads or tails")
+@app_commands.describe(choice="heads or tails", bet="Coins to wager")
+@app_commands.choices(choice=[app_commands.Choice(name="Heads", value="heads"), app_commands.Choice(name="Tails", value="tails")])
+async def economy_coinflip(interaction: discord.Interaction, choice: app_commands.Choice[str], bet: app_commands.Range[int, 1, 1000]) -> None:
+    if not await economy.spend(interaction.user.id, bet):
+        await interaction.response.send_message("You do not have enough wallet coins for that bet.", ephemeral=True)
+        return
+    result = random.choice(["heads", "tails"])
+    won = result == choice.value
+    winnings = bet * 2 if won else 0
+    profile, _ = await economy.award(interaction.user.id, coins=winnings, xp=8)
+    await economy.progress(interaction.user.id, "games")
+    await interaction.response.send_message(f"The coin landed on **{result}**. " + (f"You won **{winnings:,}** coins!" if won else f"You lost **{bet:,}** coins.") + f" Wallet: **{profile['wallet']:,}**.")
+
+
+@economy_group.command(name="shop", description="View the coin shop")
+async def economy_shop(interaction: discord.Interaction) -> None:
+    lines = [f"**{key}** — {item['price']:,} coins — {item['description']}" for key, item in SHOP.items()]
+    await interaction.response.send_message("**Dragon Army Shop**\\n" + "\\n".join(lines), ephemeral=True)
+
+
+@economy_group.command(name="buy", description="Buy an item from the coin shop")
+@app_commands.describe(item="Shop item key")
+async def economy_buy(interaction: discord.Interaction, item: str) -> None:
+    key = item.casefold()
+    if key not in SHOP:
+        await interaction.response.send_message(f"That item is not in the shop. Use `/economy shop`.", ephemeral=True)
+        return
+    product = SHOP[key]
+    if not await economy.spend(interaction.user.id, product["price"]):
+        await interaction.response.send_message("You do not have enough wallet coins.", ephemeral=True)
+        return
+    await economy.add_item(interaction.user.id, key)
+    await interaction.response.send_message(f"You bought **{product['name']}** for **{product['price']:,}** coins.")
+
+
+@economy_group.command(name="inventory", description="View your inventory")
+async def economy_inventory(interaction: discord.Interaction) -> None:
+    inventory = economy.get(interaction.user.id).get("inventory", {})
+    text = "\\n".join(f"- **{SHOP.get(key, {'name': key})['name']}** x{amount}" for key, amount in inventory.items())
+    await interaction.response.send_message(text or "Your inventory is empty. Visit `/economy shop`.", ephemeral=True)
+
+
+@economy_group.command(name="pay", description="Pay another member from your wallet")
+@app_commands.describe(user="Member to pay", amount="Coins to transfer")
+async def economy_pay(interaction: discord.Interaction, user: discord.User, amount: app_commands.Range[int, 1, 1000000]) -> None:
+    if user.id == interaction.user.id or user.bot:
+        await interaction.response.send_message("Choose another human member.", ephemeral=True)
+        return
+    if not await economy.transfer(interaction.user.id, user.id, amount):
+        await interaction.response.send_message("Payment failed. Check your wallet balance and amount.", ephemeral=True)
+        return
+    await interaction.response.send_message(f"Paid **{amount:,}** coins to {user.mention}.")
+
+
+@economy_group.command(name="deposit", description="Move wallet coins into your bank")
+async def economy_deposit(interaction: discord.Interaction, amount: app_commands.Range[int, 1, 1000000]) -> None:
+    if not await economy.deposit(interaction.user.id, amount):
+        await interaction.response.send_message("You do not have enough wallet coins.", ephemeral=True)
+        return
+    await interaction.response.send_message(f"Deposited **{amount:,}** coins into your bank.")
+
+
+@economy_group.command(name="withdraw", description="Move bank coins into your wallet")
+async def economy_withdraw(interaction: discord.Interaction, amount: app_commands.Range[int, 1, 1000000]) -> None:
+    if not await economy.withdraw(interaction.user.id, amount):
+        await interaction.response.send_message("You do not have enough banked coins.", ephemeral=True)
+        return
+    await interaction.response.send_message(f"Withdrew **{amount:,}** coins from your bank.")
+
+
+@economy_group.command(name="leaderboard", description="View the richest players")
+async def economy_leaderboard(interaction: discord.Interaction) -> None:
+    rows = economy.leaderboard()
+    if not rows:
+        await interaction.response.send_message("No players yet. Start with `/economy daily`!")
+        return
+    lines = [f"**{index}.** <@{user_id}> — {profile.get('wallet', 0) + profile.get('bank', 0):,} coins" for index, (user_id, profile) in enumerate(rows, start=1)]
+    await interaction.response.send_message("**Dragon Army Rich List**\\n" + "\\n".join(lines))
+
+
+@economy_group.command(name="quest", description="View your rotating economy quests")
+async def economy_quest(interaction: discord.Interaction) -> None:
+    profile = economy.get(interaction.user.id)
+    progress = profile.get("quest_progress", {})
+    lines = [f"Work **{min(progress.get('work', 0), 5)}/5** — reward 500 coins", f"Play games **{min(progress.get('games', 0), 3)}/3** — reward 350 coins", f"Fish **{min(progress.get('fish', 0), 3)}/3** — reward 450 coins"]
+    await interaction.response.send_message("**Daily Guild Quests**\\n" + "\\n".join(lines) + "\\nComplete them during your adventures to track progress.", ephemeral=True)
+
+
+@bot.tree.command(name="slowmode", description="Set the current channel slowmode")
+@app_commands.guild_only()
+@app_commands.default_permissions(manage_channels=True)
+async def slowmode(interaction: discord.Interaction, seconds: app_commands.Range[int, 0, 21600]) -> None:
+    if not isinstance(interaction.channel, discord.TextChannel):
+        await interaction.response.send_message("This only works in a text channel.", ephemeral=True)
+        return
+    await interaction.channel.edit(slowmode_delay=seconds)
+    await interaction.response.send_message(f"Slowmode set to **{seconds} seconds**.")
+
+
+@bot.tree.command(name="lock", description="Lock the current channel")
+@app_commands.guild_only()
+@app_commands.default_permissions(manage_channels=True)
+async def lock(interaction: discord.Interaction) -> None:
+    if not isinstance(interaction.channel, discord.TextChannel):
+        await interaction.response.send_message("This only works in a text channel.", ephemeral=True)
+        return
+    overwrite = interaction.channel.overwrites_for(interaction.guild.default_role)
+    overwrite.send_messages = False
+    await interaction.channel.set_permissions(interaction.guild.default_role, overwrite=overwrite, reason=f"Locked by {interaction.user}")
+    await interaction.response.send_message("Channel locked. Members can no longer send messages.")
+
+
+@bot.tree.command(name="unlock", description="Unlock the current channel")
+@app_commands.guild_only()
+@app_commands.default_permissions(manage_channels=True)
+async def unlock(interaction: discord.Interaction) -> None:
+    if not isinstance(interaction.channel, discord.TextChannel):
+        await interaction.response.send_message("This only works in a text channel.", ephemeral=True)
+        return
+    overwrite = interaction.channel.overwrites_for(interaction.guild.default_role)
+    overwrite.send_messages = None
+    await interaction.channel.set_permissions(interaction.guild.default_role, overwrite=overwrite, reason=f"Unlocked by {interaction.user}")
+    await interaction.response.send_message("Channel unlocked.")
+
+
+@bot.tree.command(name="nickname", description="Set or clear a member nickname")
+@app_commands.guild_only()
+@app_commands.default_permissions(manage_nicknames=True)
+async def nickname(interaction: discord.Interaction, user: discord.Member, name: str | None = None) -> None:
+    if not isinstance(interaction.user, discord.Member) or not interaction.user.guild_permissions.manage_nicknames:
+        await interaction.response.send_message("You do not have permission to manage nicknames.", ephemeral=True)
+        return
+    if not can_moderate(interaction.user, user):
+        await interaction.response.send_message("That member has an equal or higher role than you.", ephemeral=True)
+        return
+    await user.edit(nick=name, reason=f"Nickname changed by {interaction.user}")
+    await interaction.response.send_message(f"Nickname {'cleared' if not name else 'set to ' + name} for {user.mention}.")
+
+
+@bot.tree.command(name="unban", description="Unban a user by ID")
+@app_commands.guild_only()
+@app_commands.default_permissions(ban_members=True)
+async def unban(interaction: discord.Interaction, user_id: str) -> None:
+    if not user_id.isdigit():
+        await interaction.response.send_message("Enter a numeric Discord user ID.", ephemeral=True)
+        return
+    user = await bot.fetch_user(int(user_id))
+    await interaction.guild.unban(user, reason=f"Unbanned by {interaction.user}")
+    await interaction.response.send_message(f"Unbanned **{user}**.")
+
+
 bot.tree.add_command(config_group)
 bot.tree.add_command(automod_group)
 bot.tree.add_command(custom_group)
+bot.tree.add_command(economy_group)
 
 
 async def main() -> None:
     await store.load()
+    await economy.load()
     async with bot:
         await bot.start(TOKEN)
 

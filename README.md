@@ -1,45 +1,53 @@
 # Dragon Army Bot
 
-Dragon Army Bot is a **Python-only, slash-command Discord bot** inspired by Carl-bot and Dyno. It is designed to run directly on Pella or any standard Python bot host.
-
-## Main file
-
-The main file is:
-
-```text
-main.py
-```
-
-The bot uses only slash commands. There is no TypeScript, JavaScript, `src/` entry point, or prefix-command handler in this version.
-
-## Included commands
-
-| Area | Commands and behavior |
-| --- | --- |
-| Moderation | `/warn`, `/timeout`, `/kick`, `/ban`, and `/purge` with permission and role checks |
-| Server configuration | `/config view`, `/config log-channel`, `/config welcome`, and `/config reset` |
-| Automod | `/automod`, `/blockword add`, `/blockword remove`, and `/blockword list` |
-| Onboarding | Welcome messages with `{user}` and `{server}` placeholders |
-| Logging | Configurable channel for warnings, automod deletions, bans, and member departures |
-| Custom responses | `/custom-command set`, `/custom-command remove`, `/custom-command list`, and `/custom name` |
-| Utilities | `/help`, `/ping`, `/server`, and `/userinfo` |
+Dragon Army Bot is a **Python-only, slash-command Discord bot** inspired by Carl-bot and Dyno. It includes server moderation, automod, onboarding, logging, and a persistent Dragon Army economy game.
 
 ## Pella setup
 
-Upload this project or import the GitHub repository into Pella. Set the server language/runtime to **Python 3.10 or newer**.
+Upload this project or import the GitHub repository into Pella. Set the runtime to **Python 3.10 or newer**.
 
 | Pella setting | Value |
 | --- | --- |
 | Main file | `main.py` |
 | Install command | `pip install -r requirements.txt` |
 | Startup command | `python main.py` |
-| Environment variable | `DISCORD_TOKEN=your_new_bot_token` |
+| Required environment variable | `DISCORD_TOKEN=your_new_bot_token` |
 | Optional environment variable | `DISCORD_GUILD_ID=your_test_server_id` |
 | Optional environment variable | `DATA_FILE=data/config.json` |
 
-The bot only needs `DISCORD_TOKEN` to start. Set `DISCORD_GUILD_ID` if you want slash commands registered quickly in one test server. If it is empty, the bot registers commands globally, which can take longer to appear.
+Only `DISCORD_TOKEN` is needed to start the bot. Set `DISCORD_GUILD_ID` if you want slash commands to appear immediately in one test server. If it is empty, the bot registers commands globally and Discord may take longer to display them. Keep the `data` directory persistent so both `config.json` and `economy.json` survive restarts.
 
-Add the token through Pella’s environment-variable settings. Do not put a real token in `.env`, GitHub, or the ZIP file. The token previously pasted into chat should be revoked and replaced before use. Keep `data/config.json` persistent if you want server settings to survive restarts.
+Do not put a real token in GitHub or the ZIP file. The token previously pasted into chat should be revoked and replaced before use. The public Pella pages advertise Python/Node.js Discord hosting and GitHub integration [1] [2], but do not document automatic two-way commits from Pella’s dashboard back to GitHub. Treat GitHub as the source repository and Pella as the deployment target.
+
+## Moderation and server tools
+
+| Area | Slash commands |
+| --- | --- |
+| Moderation | `/warn`, `/timeout`, `/kick`, `/ban`, `/unban`, `/purge`, `/nickname` |
+| Channel control | `/slowmode`, `/lock`, `/unlock` |
+| Server configuration | `/config view`, `/config log-channel`, `/config welcome`, `/config reset` |
+| Automod | `/automod`, `/blockword add`, `/blockword remove`, `/blockword list` |
+| Onboarding and logs | Welcome messages with `{user}` and `{server}`, plus moderation/automod/member logging |
+| Custom responses | `/custom-command set`, `/custom-command remove`, `/custom-command list`, and `/custom name` |
+| Utilities | `/help`, `/ping`, `/server`, and `/userinfo` |
+
+Moderation commands use Discord permission gates and role-hierarchy checks. The bot does not bypass Discord permissions, and the bot role must be below roles it should not moderate.
+
+## Dragon Army economy game
+
+Every player starts with 100 coins. The economy is stored persistently in `data/economy.json`, with separate wallet and bank balances, XP, levels, cooldowns, inventory, quests, and a global rich list.
+
+| Feature | Commands and gameplay |
+| --- | --- |
+| Account | `/economy balance`, `/economy deposit`, `/economy withdraw`, `/economy inventory` |
+| Earning | `/economy daily`, `/economy work`, `/economy fish`, `/economy mine`, `/economy hunt` |
+| Games | `/economy slots` and `/economy coinflip` with cooldowns and wager limits |
+| Shop | `/economy shop` and `/economy buy` for Coffee, Lucky Charms, Fishing Rods, Pickaxes, and Crowns |
+| Social | `/economy pay` lets players transfer wallet coins to each other |
+| Progression | `/economy quest` tracks work, game, and fishing goals; XP unlocks levels |
+| Competition | `/economy leaderboard` ranks players by wallet plus bank wealth |
+
+The earning activities use cooldowns, randomized rewards, rare drops, item bonuses, and XP progression. Gambling commands have bounded wager ranges and do not use real money. The economy intentionally uses virtual coins only.
 
 ## Local setup
 
@@ -51,15 +59,20 @@ cp .env.example .env
 python main.py
 ```
 
-## Discord setup
+Create a Discord application and bot user, then enable the **Server Members Intent** and **Message Content Intent** in the Developer Portal. Invite the bot with View Channels, Send Messages, Embed Links, Read Message History, Manage Messages, Moderate Members, Kick Members, Ban Members, and Manage Channels as needed.
 
-Create a Discord application and bot user, then enable the **Server Members Intent** and **Message Content Intent** in the Developer Portal. Invite the bot with the permissions required for your server: View Channels, Send Messages, Embed Links, Read Message History, Manage Messages, Moderate Members, Kick Members, and Ban Members. Keep the bot role below roles it should not moderate.
+## Project files
 
-## Notes
+The main runtime is `main.py`. Economy logic and persistence are in `economy.py`. Python dependencies are listed in `requirements.txt`. The standard-library tests are in `test_main.py`.
 
-This is an MVP rather than a clone of every Carl-bot or Dyno feature. The JSON store and command groups are structured so ticketing, reaction roles, giveaways, reminders, and a dashboard can be added later.
+Run checks with:
 
-Pella advertises Node.js and Python Discord bot hosting and GitHub integration [1] [2]. Its public pages confirm repository import/integration but do not document automatic two-way commits from Pella’s dashboard back to GitHub. Treat GitHub as the source repository and Pella as the deployment target unless your authenticated Pella dashboard explicitly provides a commit or push action.
+```bash
+python3 -m py_compile main.py economy.py test_main.py
+python3 -m unittest -v
+```
+
+This remains an MVP rather than a clone of every Carl-bot or Dyno feature. Ticketing, reaction roles, giveaways, reminders, and a web dashboard can be added later.
 
 ## References
 
